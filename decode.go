@@ -1,4 +1,4 @@
-package marshalling
+package bb
 
 import (
 	"encoding/binary"
@@ -16,6 +16,9 @@ func NewDecoder(r io.Reader) *Decoder {
 	return &Decoder{r: r}
 }
 
+// Decode writes unmarshalled data from io.Reader to v.
+//
+// # v must be pointer to struct
 func (d *Decoder) Decode(v interface{}) error {
 	val := reflect.ValueOf(v)
 	if val.Kind() != reflect.Ptr || val.IsNil() {

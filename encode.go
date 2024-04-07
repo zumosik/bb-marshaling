@@ -1,4 +1,4 @@
-package marshalling
+package bb
 
 import (
 	"encoding/binary"
@@ -17,6 +17,8 @@ func NewEncoder(w io.Writer) *Encoder {
 }
 
 // Encode writes the marshalled representation of v to the underlying io.Writer.
+//
+// # v must be struct
 func (e *Encoder) Encode(v interface{}) error {
 	val := reflect.ValueOf(v)
 	if !val.IsValid() || !(val.Kind() == reflect.Struct) {
