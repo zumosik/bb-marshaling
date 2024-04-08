@@ -1,82 +1,72 @@
 # BB marshaling
-Library for encoding and decoding data into binary format
+> Library for marshalling data into binary format  
+
+[![Built with Go](https://img.shields.io/badge/Built%20with-Go-00ADD8.svg)](https://golang.org/)
+![GitHub License](https://img.shields.io/github/license/zumosik/bb-marshaling)
+
+This library provides functionality to convert (marshal) a Go struct into a binary format and to convert (unmarshal) binary data back into a Go struct. The aim is to ensure that the binary representation is as concise and straightforward as possible.
 ## Supported types for fields
 - string
 - bool
-- int8, int16, int32, int64
-- uint8, uint16, uint32, uint64
+- int, int8, int16, int32, int64
+- uint, uint8, uint16, uint32, uint64
 - float32, float64
-- Array/Slice of any type upper
+- Array/Slice of any type upper or of array of supported types
 ## Not supported types for fields
-- int 
-- uint
 - pointer
 - func
 - interface{}
 - map
 - chan
 ## Basic example
-### Encode
+### Marshall
 ```go
 package main
 
 import (
+	"fmt"
 	"github.com/zumosik/bb-marshaling"
-	"os"
 )
 
 type TestStruct struct {
-	Num         int64
-	Flag        bool
-	ArrOfFloats []float64
+	Num  int64
+	Flag bool
 }
 
 func main() {
-	f, _ := os.Create("file.bin")
-
-	enc := bb.NewEncoder(f)
-
-	data := TestStruct{
-		Num:         2,
-		Flag:        true,
-		ArrOfFloats: []float64{1.1, 2.2, 3.3, 4.4},
-	}
-
-	err := enc.Encode(data)
+	binData, err := bb.Marshall(TestStruct{Num: 3, Flag: true})
 	if err != nil {
-		panic(err)
+		// handle error
 	}
+
+	fmt.Println(binData) // do something with the binary data
 }
+
 ```
-### Decode
+### Unmarshall
 ```go
 package main
 
 import (
+	"fmt"
 	"github.com/zumosik/bb-marshaling"
-	"os"
 )
 
 type TestStruct struct {
-	Num         int64
-	Flag        bool
-	ArrOfFloats []float64
+	Num  int64
+	Flag bool
 }
 
 func main() {
-	f, _ := os.Open("file.bin")
+	binData := []byte{0, 0, 0, 0, 0, 0, 0, 3, 1} // data from previous example
+	var v TestStruct
 
-	dec := bb.NewDecoder(f)
-
-	data := TestStruct{
-		Num:         2,
-		Flag:        true,
-		ArrOfFloats: []float64{1.1, 2.2, 3.3, 4.4},
-	}
-
-	err := dec.Decode(&data)
+	err := bb.Unmarshall(binData, &v)
 	if err != nil {
-		panic(err)
+		// handle error
 	}
+
+	fmt.Println(v) // // do something with the unmarshalled data
 }
+
 ```

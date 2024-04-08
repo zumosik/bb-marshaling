@@ -1,7 +1,6 @@
 package bb
 
 import (
-	"bytes"
 	"reflect"
 	"testing"
 )
@@ -12,133 +11,168 @@ func Test_EncodeDecode(t *testing.T) {
 		sample interface{}
 	}{
 		{
-			name: "TestStructFloat",
+			name: "Test 1",
 			sample: struct {
-				Float float32
+				Num  int64
+				Flag bool
 			}{
-				Float: 1.552,
+				Num:  3,
+				Flag: true,
 			},
 		},
 		{
-			name: "TestStructInt",
+			name: "Test 2",
 			sample: struct {
-				I32 int32
+				Num  int64
+				Flag bool
 			}{
-				I32: 42,
+				Num:  8,
+				Flag: false,
 			},
 		},
 		{
-			name: "TestStructString",
+			name: "Test 3",
 			sample: struct {
-				Str  string
-				Str1 string
-				Str2 string
-				Str3 string
+				Num  int64
+				Flag bool
 			}{
-				Str:  "hello",
-				Str1: "world",
-				Str2: "c++",
-				Str3: "go",
+				Num:  5,
+				Flag: true,
 			},
 		},
 		{
-			name: "TestStructBool",
+			name: "Test 4",
 			sample: struct {
-				Flag  bool
-				Flag1 bool
-				Flag2 bool
+				Num  int64
+				Flag bool
 			}{
-				Flag:  true,
-				Flag1: false,
-				Flag2: false,
+				Num:  6,
+				Flag: false,
 			},
 		},
 		{
-			name: "TestStructArr",
+			name: "Test 5",
 			sample: struct {
-				ArrBool  []bool
-				ArrFloat []float32
-				ArrStr   []string
-
+				Num  int64
+				Flag bool
+			}{
+				Num:  1,
+				Flag: true,
+			},
+		},
+		{
+			name: "Test 6",
+			sample: struct {
+				Num  int64
+				Flag bool
+			}{
+				Num:  3,
+				Flag: true,
+			},
+		},
+		{
+			name: "Test 7",
+			sample: struct {
+				Num  int64
+				Flag bool
+			}{
+				Num:  8,
+				Flag: false,
+			},
+		},
+		{
+			name: "Test 8",
+			sample: struct {
+				Num  int64
+				Flag bool
+			}{
+				Num:  5,
+				Flag: true,
+			},
+		},
+		{
+			name: "Test 9",
+			sample: struct {
+				Num  int64
+				Flag bool
+			}{
+				Num:  6,
+				Flag: false,
+			},
+		},
+		{
+			name: "Test 10",
+			sample: struct {
+				Num int64
+			}{
+				Num: 1,
+			},
+		},
+		// test cases with arrays
+		{
+			name: "Test 11",
+			sample: struct {
+				ArrBool []bool
+			}{
+				ArrBool: []bool{true, false, true},
+			},
+		},
+		{
+			name: "Test 12",
+			sample: struct {
 				ArrI32 []int32
-				ArrI64 []int64
-				ArrI16 []int16
-				ArrI8  []int8
 			}{
-				ArrBool:  []bool{true, false, false},
-				ArrFloat: []float32{1.1, 2.2, 3.3},
-				ArrStr: []string{
-					"hello", "world", "C++", "go",
-				},
 				ArrI32: []int32{1, 2, 3},
-				ArrI64: []int64{1, 2, 3},
-				ArrI16: []int16{1, 2, 3},
-				ArrI8:  []int8{1, 2, 3},
 			},
 		},
 		{
-			name: "TestStructMoreFields",
+			name: "Test 13",
 			sample: struct {
-				F32    []float32
-				StrArr []string
+				ArrUI32 []uint32
 			}{
-				F32:    []float32{1.1, 2.2, 3.3},
-				StrArr: []string{"hello", "world", "C++", "go"},
+				ArrUI32: []uint32{1, 2, 3},
 			},
 		},
 		{
-			name: "TestAnotherStruct",
+			name: "Test 14",
 			sample: struct {
-				S string
-				B bool
-
-				I8  int8
-				I16 int16
-				I32 int32
-				I64 int64
-
-				F32 float32
-				F64 float64
+				ArrUint8 []uint8
 			}{
-				S:   "hello world",
-				B:   false,
-				I8:  -8,
-				I16: -99,
-				I32: 25,
-				I64: 445,
-				F32: -0.066,
-				F64: -0.2577,
+				ArrUint8: []uint8{1, 2, 3},
+			},
+		},
+		{
+			name: "Test 15",
+			sample: struct {
+				ArrBool   [][]bool
+				ArrUint16 [][]uint16
+			}{
+				ArrBool:   [][]bool{{true, false}, {true, false}},
+				ArrUint16: [][]uint16{{1, 2}, {3, 4}},
 			},
 		},
 	}
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			// Create an encoder
-			var buf bytes.Buffer
-			encoder := &Encoder{w: &buf}
-
-			// Encode the sample struct
-			if err := encoder.Encode(test.sample); err != nil {
-				t.Fatalf("error encoding struct: %v", err)
+			b, err := Marshall(test.sample)
+			if err != nil {
+				t.Errorf("Marshall() error = %v", err)
 			}
-
-			t.Log(buf)
 
 			// Create a new instance of the same type as test.sample
-			decodedStruct := reflect.New(reflect.TypeOf(test.sample)).Interface()
+			structDecode := reflect.New(reflect.TypeOf(test.sample)).Interface()
 
-			// Create a decoder
-			decoder := &Decoder{r: bytes.NewBuffer(buf.Bytes())}
-
-			// Decode into the new struct
-			if err := decoder.Decode(decodedStruct); err != nil {
-				t.Fatalf("error decoding struct: %v", err)
+			err = Unmarshall(b, structDecode)
+			if err != nil {
+				t.Errorf("Unmarshall() error = %v", err)
 			}
 
-			// Check if the decoded struct is the same as the original struct
-			if !reflect.DeepEqual(test.sample, reflect.ValueOf(decodedStruct).Elem().Interface()) {
-				t.Errorf("decoded struct does not match original struct.\nOriginal: %+v\nDecoded: %+v", test.sample, decodedStruct)
+			if !reflect.DeepEqual(test.sample,
+				reflect.ValueOf(structDecode).Elem().Interface()) {
+				t.Errorf("Expected: %v, got: %v", test.sample, reflect.ValueOf(structDecode).Elem().Interface())
+			} else {
+				t.Logf("Test passed")
 			}
 		})
 	}

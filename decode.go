@@ -1,28 +1,18 @@
 package bb
 
 import (
+	"bytes"
 	"encoding/binary"
-	"errors"
 	"io"
-	"net"
 	"reflect"
-	"time"
 )
 
-// A Decoder reads bytes from stream and writes them to values.
-type Decoder struct {
-	r io.Reader
-}
-
-// NewDecoder creates a new Decoder with the given io.Reader.
-func NewDecoder(r io.Reader) *Decoder {
-	return &Decoder{r: r}
-}
-
-// Decode writes unmarshalled data from io.Reader to v.
+// Unmarshall reads marshalled representation of struct v from a byte slice.
 //
 // # v must be pointer to struct
-func (d *Decoder) Decode(v interface{}) error {
+func Unmarshall(data []byte, v interface{}) error {
+	buf := bytes.NewBuffer(data)
+
 	valPtr := reflect.ValueOf(v)
 	if valPtr.Kind() != reflect.Ptr || valPtr.IsNil() {
 		return ErrInvalidType
@@ -39,156 +29,40 @@ func (d *Decoder) Decode(v interface{}) error {
 			continue
 		}
 
-		if err := d.DecodeField(field); err != nil {
+		if err := decodeField(buf, field); err != nil {
 			return err
 		}
 	}
 
 	return nil
 }
-func (d *Decoder) DecodeField(field reflect.Value) error {
-	conn, ok := d.r.(net.Conn)
-	if ok {
-		// Set a deadline for the read operation
-		err := conn.SetReadDeadline(time.Now().Add(time.Second * 1))
-		if err != nil {
-			return err
-		} // 1s timeout
-	}
-
+func decodeField(buf *bytes.Buffer, field reflect.Value) error {
 	switch field.Type().Kind() {
 	// --- String ---
 	case reflect.String:
-		str, err := d.decodeStr()
+		str, err := decodeStr(buf)
 		if err != nil {
-			var netErr net.Error
-			if errors.As(err, &netErr) && netErr.Timeout() {
-				return nil // Skip this field if there's a timeout error
-			}
 			return err
 		}
 		field.SetString(str)
 	// --- Bool ---
 	case reflect.Bool:
-		b, err := d.decodeBool()
+		b, err := decodeBool(buf)
 		if err != nil {
-			var netErr net.Error
-			if errors.As(err, &netErr) && netErr.Timeout() {
-				return nil // Skip this field if there's a timeout error
-			}
 			return err
 		}
 		field.SetBool(b)
-	// --- Int ---
-	case reflect.Int8:
-		i, err := d.decodeInt8()
-		if err != nil {
-			var netErr net.Error
-			if errors.As(err, &netErr) && netErr.Timeout() {
-				return nil // Skip this field if there's a timeout error
-			}
+	// --- Float, Int, Uint ---
+	case reflect.Float32, reflect.Float64,
+		reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64,
+		reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+
+		if err := binary.Read(buf, binary.BigEndian, field.Addr().Interface()); err != nil {
 			return err
 		}
-		field.SetInt(int64(i))
-	case reflect.Int16:
-		i, err := d.decodeInt16()
-		if err != nil {
-			var netErr net.Error
-			if errors.As(err, &netErr) && netErr.Timeout() {
-				return nil // Skip this field if there's a timeout error
-			}
-			return err
-		}
-		field.SetInt(int64(i))
-	case reflect.Int32:
-		i, err := d.decodeInt32()
-		if err != nil {
-			var netErr net.Error
-			if errors.As(err, &netErr) && netErr.Timeout() {
-				return nil // Skip this field if there's a timeout error
-			}
-			return err
-		}
-		field.SetInt(int64(i))
-	case reflect.Int64:
-		i, err := d.decodeInt64()
-		if err != nil {
-			var netErr net.Error
-			if errors.As(err, &netErr) && netErr.Timeout() {
-				return nil // Skip this field if there's a timeout error
-			}
-			return err
-		}
-		field.SetInt(i)
-	// --- Uint ---
-	case reflect.Uint8:
-		ui, err := d.decodeUint8()
-		if err != nil {
-			var netErr net.Error
-			if errors.As(err, &netErr) && netErr.Timeout() {
-				return nil // Skip this field if there's a timeout error
-			}
-			return err
-		}
-		field.SetUint(uint64(ui))
-	case reflect.Uint16:
-		ui, err := d.decodeUint16()
-		if err != nil {
-			var netErr net.Error
-			if errors.As(err, &netErr) && netErr.Timeout() {
-				return nil // Skip this field if there's a timeout error
-			}
-			return err
-		}
-		field.SetUint(uint64(ui))
-	case reflect.Uint32:
-		ui, err := d.decodeUint32()
-		if err != nil {
-			var netErr net.Error
-			if errors.As(err, &netErr) && netErr.Timeout() {
-				return nil // Skip this field if there's a timeout error
-			}
-			return err
-		}
-		field.SetUint(uint64(ui))
-	case reflect.Uint64:
-		ui, err := d.decodeUint64()
-		if err != nil {
-			var netErr net.Error
-			if errors.As(err, &netErr) && netErr.Timeout() {
-				return nil // Skip this field if there's a timeout error
-			}
-			return err
-		}
-		field.SetUint(ui)
-	// --- Float ---
-	case reflect.Float32:
-		f, err := d.decodeFloat32()
-		if err != nil {
-			var netErr net.Error
-			if errors.As(err, &netErr) && netErr.Timeout() {
-				return nil // Skip this field if there's a timeout error
-			}
-			return err
-		}
-		field.SetFloat(float64(f))
-	case reflect.Float64:
-		f, err := d.decodeFloat64()
-		if err != nil {
-			var netErr net.Error
-			if errors.As(err, &netErr) && netErr.Timeout() {
-				return nil // Skip this field if there's a timeout error
-			}
-			return err
-		}
-		field.SetFloat(f)
 	// --- Slice/Array ---
 	case reflect.Array, reflect.Slice:
-		if err := d.decodeArraySlice(field); err != nil {
-			var netErr net.Error
-			if errors.As(err, &netErr) && netErr.Timeout() {
-				return nil // Skip this field if there's a timeout error
-			}
+		if err := decodeArraySlice(buf, field); err != nil {
 			return err
 		}
 	default:
@@ -198,8 +72,8 @@ func (d *Decoder) DecodeField(field reflect.Value) error {
 	return nil
 }
 
-func (d *Decoder) decodeArraySlice(field reflect.Value) error {
-	length, err := d.decodeUint32()
+func decodeArraySlice(buf *bytes.Buffer, field reflect.Value) error {
+	length, err := decodeSize(buf)
 	if err != nil {
 		return err
 	}
@@ -210,7 +84,7 @@ func (d *Decoder) decodeArraySlice(field reflect.Value) error {
 
 	for i := 0; i < int(length); i++ {
 		elem := reflect.New(field.Type().Elem()).Elem() // Create a new element of the slice type
-		if err := d.DecodeField(elem); err != nil {
+		if err := decodeField(buf, elem); err != nil {
 			return err
 		}
 		newSlice.Index(i).Set(elem) // Set the decoded element to the slice
@@ -221,21 +95,21 @@ func (d *Decoder) decodeArraySlice(field reflect.Value) error {
 	return nil
 }
 
-func (d *Decoder) decodeStr() (string, error) {
-	length, err := d.decodeUint32()
+func decodeStr(buf *bytes.Buffer) (string, error) {
+	length, err := decodeSize(buf)
 	if err != nil {
 		return "", err
 	}
 	strBytes := make([]byte, length)
-	if _, err := io.ReadFull(d.r, strBytes); err != nil {
+	if _, err := io.ReadFull(buf, strBytes); err != nil {
 		return "", err
 	}
 	return string(strBytes), nil
 }
 
-func (d *Decoder) decodeBool() (bool, error) {
+func decodeBool(buf *bytes.Buffer) (bool, error) {
 	var b [1]byte
-	_, err := d.r.Read(b[:])
+	_, err := buf.Read(b[:])
 	if err != nil {
 		return false, err
 	}
@@ -243,82 +117,8 @@ func (d *Decoder) decodeBool() (bool, error) {
 	return b[0] != 0, nil
 }
 
-func (d *Decoder) decodeInt8() (int8, error) {
-	var i int8
-	if err := binary.Read(d.r, binary.BigEndian, &i); err != nil {
-		return 0, err
-	}
-	return i, nil
-}
-
-func (d *Decoder) decodeInt16() (int16, error) {
-	var i int16
-	if err := binary.Read(d.r, binary.BigEndian, &i); err != nil {
-		return 0, err
-	}
-	return i, nil
-}
-
-func (d *Decoder) decodeInt32() (int32, error) {
-	var i int32
-	if err := binary.Read(d.r, binary.BigEndian, &i); err != nil {
-		return 0, err
-	}
-	return i, nil
-}
-
-func (d *Decoder) decodeInt64() (int64, error) {
-	var i int64
-	if err := binary.Read(d.r, binary.BigEndian, &i); err != nil {
-		return 0, err
-	}
-	return i, nil
-}
-
-func (d *Decoder) decodeUint8() (uint8, error) {
-	var u uint8
-	if err := binary.Read(d.r, binary.BigEndian, &u); err != nil {
-		return 0, err
-	}
-	return u, nil
-}
-
-func (d *Decoder) decodeUint16() (uint16, error) {
-	var u uint16
-	if err := binary.Read(d.r, binary.BigEndian, &u); err != nil {
-		return 0, err
-	}
-	return u, nil
-}
-
-func (d *Decoder) decodeUint32() (uint32, error) {
-	var u uint32
-	if err := binary.Read(d.r, binary.BigEndian, &u); err != nil {
-		return 0, err
-	}
-	return u, nil
-}
-
-func (d *Decoder) decodeUint64() (uint64, error) {
-	var u uint64
-	if err := binary.Read(d.r, binary.BigEndian, &u); err != nil {
-		return 0, err
-	}
-	return u, nil
-}
-
-func (d *Decoder) decodeFloat32() (float32, error) {
-	var f float32
-	if err := binary.Read(d.r, binary.BigEndian, &f); err != nil {
-		return 0, err
-	}
-	return f, nil
-}
-
-func (d *Decoder) decodeFloat64() (float64, error) {
-	var f float64
-	if err := binary.Read(d.r, binary.BigEndian, &f); err != nil {
-		return 0, err
-	}
-	return f, nil
+func decodeSize(buf *bytes.Buffer) (uint32, error) {
+	var i uint32
+	err := binary.Read(buf, binary.BigEndian, &i)
+	return i, err
 }
