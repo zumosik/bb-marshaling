@@ -2,8 +2,11 @@ package bb
 
 import (
 	"encoding/binary"
+	"errors"
 	"io"
+	"net"
 	"reflect"
+	"time"
 )
 
 // A Decoder reads bytes from stream and writes them to values.
@@ -20,11 +23,11 @@ func NewDecoder(r io.Reader) *Decoder {
 //
 // # v must be pointer to struct
 func (d *Decoder) Decode(v interface{}) error {
-	val := reflect.ValueOf(v)
-	if val.Kind() != reflect.Ptr || val.IsNil() {
+	valPtr := reflect.ValueOf(v)
+	if valPtr.Kind() != reflect.Ptr || valPtr.IsNil() {
 		return ErrInvalidType
 	}
-	val = val.Elem()
+	val := valPtr.Elem()
 	if val.Kind() != reflect.Struct {
 		return ErrInvalidType
 	}
@@ -43,14 +46,25 @@ func (d *Decoder) Decode(v interface{}) error {
 
 	return nil
 }
-
 func (d *Decoder) DecodeField(field reflect.Value) error {
+	conn, ok := d.r.(net.Conn)
+	if ok {
+		// Set a deadline for the read operation
+		err := conn.SetReadDeadline(time.Now().Add(time.Second * 1))
+		if err != nil {
+			return err
+		} // 1s timeout
+	}
 
 	switch field.Type().Kind() {
 	// --- String ---
 	case reflect.String:
 		str, err := d.decodeStr()
 		if err != nil {
+			var netErr net.Error
+			if errors.As(err, &netErr) && netErr.Timeout() {
+				return nil // Skip this field if there's a timeout error
+			}
 			return err
 		}
 		field.SetString(str)
@@ -58,6 +72,10 @@ func (d *Decoder) DecodeField(field reflect.Value) error {
 	case reflect.Bool:
 		b, err := d.decodeBool()
 		if err != nil {
+			var netErr net.Error
+			if errors.As(err, &netErr) && netErr.Timeout() {
+				return nil // Skip this field if there's a timeout error
+			}
 			return err
 		}
 		field.SetBool(b)
@@ -65,24 +83,40 @@ func (d *Decoder) DecodeField(field reflect.Value) error {
 	case reflect.Int8:
 		i, err := d.decodeInt8()
 		if err != nil {
+			var netErr net.Error
+			if errors.As(err, &netErr) && netErr.Timeout() {
+				return nil // Skip this field if there's a timeout error
+			}
 			return err
 		}
 		field.SetInt(int64(i))
 	case reflect.Int16:
 		i, err := d.decodeInt16()
 		if err != nil {
+			var netErr net.Error
+			if errors.As(err, &netErr) && netErr.Timeout() {
+				return nil // Skip this field if there's a timeout error
+			}
 			return err
 		}
 		field.SetInt(int64(i))
 	case reflect.Int32:
 		i, err := d.decodeInt32()
 		if err != nil {
+			var netErr net.Error
+			if errors.As(err, &netErr) && netErr.Timeout() {
+				return nil // Skip this field if there's a timeout error
+			}
 			return err
 		}
 		field.SetInt(int64(i))
 	case reflect.Int64:
 		i, err := d.decodeInt64()
 		if err != nil {
+			var netErr net.Error
+			if errors.As(err, &netErr) && netErr.Timeout() {
+				return nil // Skip this field if there's a timeout error
+			}
 			return err
 		}
 		field.SetInt(i)
@@ -90,24 +124,40 @@ func (d *Decoder) DecodeField(field reflect.Value) error {
 	case reflect.Uint8:
 		ui, err := d.decodeUint8()
 		if err != nil {
+			var netErr net.Error
+			if errors.As(err, &netErr) && netErr.Timeout() {
+				return nil // Skip this field if there's a timeout error
+			}
 			return err
 		}
 		field.SetUint(uint64(ui))
 	case reflect.Uint16:
 		ui, err := d.decodeUint16()
 		if err != nil {
+			var netErr net.Error
+			if errors.As(err, &netErr) && netErr.Timeout() {
+				return nil // Skip this field if there's a timeout error
+			}
 			return err
 		}
 		field.SetUint(uint64(ui))
 	case reflect.Uint32:
 		ui, err := d.decodeUint32()
 		if err != nil {
+			var netErr net.Error
+			if errors.As(err, &netErr) && netErr.Timeout() {
+				return nil // Skip this field if there's a timeout error
+			}
 			return err
 		}
 		field.SetUint(uint64(ui))
 	case reflect.Uint64:
 		ui, err := d.decodeUint64()
 		if err != nil {
+			var netErr net.Error
+			if errors.As(err, &netErr) && netErr.Timeout() {
+				return nil // Skip this field if there's a timeout error
+			}
 			return err
 		}
 		field.SetUint(ui)
@@ -115,18 +165,30 @@ func (d *Decoder) DecodeField(field reflect.Value) error {
 	case reflect.Float32:
 		f, err := d.decodeFloat32()
 		if err != nil {
+			var netErr net.Error
+			if errors.As(err, &netErr) && netErr.Timeout() {
+				return nil // Skip this field if there's a timeout error
+			}
 			return err
 		}
 		field.SetFloat(float64(f))
 	case reflect.Float64:
 		f, err := d.decodeFloat64()
 		if err != nil {
+			var netErr net.Error
+			if errors.As(err, &netErr) && netErr.Timeout() {
+				return nil // Skip this field if there's a timeout error
+			}
 			return err
 		}
 		field.SetFloat(f)
 	// --- Slice/Array ---
 	case reflect.Array, reflect.Slice:
 		if err := d.decodeArraySlice(field); err != nil {
+			var netErr net.Error
+			if errors.As(err, &netErr) && netErr.Timeout() {
+				return nil // Skip this field if there's a timeout error
+			}
 			return err
 		}
 	default:
