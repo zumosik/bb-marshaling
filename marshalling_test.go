@@ -1,6 +1,7 @@
 package bb
 
 import (
+	"math"
 	"reflect"
 	"testing"
 )
@@ -11,37 +12,19 @@ func Test_EncodeDecode(t *testing.T) {
 		sample interface{}
 	}{
 		{
-			name: "Test 1",
+			name: "Test string, bool, uint32",
 			sample: struct {
-				Num  int64
+				Str  string
 				Flag bool
-			}{
-				Num:  3,
-				Flag: true,
-			},
-		},
-		{
-			name: "Test 2",
-			sample: struct {
-				Num  int64
-				Flag bool
+				Num  uint32
 			}{
 				Num:  8,
 				Flag: false,
+				Str:  "hello world!",
 			},
 		},
 		{
-			name: "Test 3",
-			sample: struct {
-				Num  int64
-				Flag bool
-			}{
-				Num:  5,
-				Flag: true,
-			},
-		},
-		{
-			name: "Test 4",
+			name: "Test int64 + bool",
 			sample: struct {
 				Num  int64
 				Flag bool
@@ -51,57 +34,7 @@ func Test_EncodeDecode(t *testing.T) {
 			},
 		},
 		{
-			name: "Test 5",
-			sample: struct {
-				Num  int64
-				Flag bool
-			}{
-				Num:  1,
-				Flag: true,
-			},
-		},
-		{
-			name: "Test 6",
-			sample: struct {
-				Num  int64
-				Flag bool
-			}{
-				Num:  3,
-				Flag: true,
-			},
-		},
-		{
-			name: "Test 7",
-			sample: struct {
-				Num  int64
-				Flag bool
-			}{
-				Num:  8,
-				Flag: false,
-			},
-		},
-		{
-			name: "Test 8",
-			sample: struct {
-				Num  int64
-				Flag bool
-			}{
-				Num:  5,
-				Flag: true,
-			},
-		},
-		{
-			name: "Test 9",
-			sample: struct {
-				Num  int64
-				Flag bool
-			}{
-				Num:  6,
-				Flag: false,
-			},
-		},
-		{
-			name: "Test 10",
+			name: "Test int64",
 			sample: struct {
 				Num int64
 			}{
@@ -110,7 +43,7 @@ func Test_EncodeDecode(t *testing.T) {
 		},
 		// test cases with arrays
 		{
-			name: "Test 11",
+			name: "Test arrays of bool",
 			sample: struct {
 				ArrBool []bool
 			}{
@@ -118,7 +51,7 @@ func Test_EncodeDecode(t *testing.T) {
 			},
 		},
 		{
-			name: "Test 12",
+			name: "Test arrays of int32",
 			sample: struct {
 				ArrI32 []int32
 			}{
@@ -126,7 +59,15 @@ func Test_EncodeDecode(t *testing.T) {
 			},
 		},
 		{
-			name: "Test 13",
+			name: "Test arrays of strings",
+			sample: struct {
+				ArrStr []string
+			}{
+				ArrStr: []string{"hello", "world"},
+			},
+		},
+		{
+			name: "Test arrays of uint32",
 			sample: struct {
 				ArrUI32 []uint32
 			}{
@@ -134,7 +75,7 @@ func Test_EncodeDecode(t *testing.T) {
 			},
 		},
 		{
-			name: "Test 14",
+			name: "Test arrays of uint8",
 			sample: struct {
 				ArrUint8 []uint8
 			}{
@@ -142,13 +83,167 @@ func Test_EncodeDecode(t *testing.T) {
 			},
 		},
 		{
-			name: "Test 15",
+			name: "Test matrix",
 			sample: struct {
 				ArrBool   [][]bool
 				ArrUint16 [][]uint16
 			}{
 				ArrBool:   [][]bool{{true, false}, {true, false}},
 				ArrUint16: [][]uint16{{1, 2}, {3, 4}},
+			},
+		},
+		{
+			name: "Test structs",
+			sample: struct {
+				Data struct {
+					Str  string
+					Num  int32
+					Flag bool
+				}
+				Info struct {
+					Id uint8
+				}
+			}{
+				Data: struct {
+					Str  string
+					Num  int32
+					Flag bool
+				}{
+					Str:  "hello world!",
+					Num:  -4040,
+					Flag: true,
+				},
+				Info: struct {
+					Id uint8
+				}{
+					Id: 90,
+				},
+			},
+		},
+		{
+			name: "Test structs with arrays",
+			sample: struct {
+				Data struct {
+					StrArr []string
+				}
+				Info struct {
+					IdArr []uint8
+				}
+			}{
+				Data: struct {
+					StrArr []string
+				}{
+					StrArr: []string{"hello", "world"},
+				},
+				Info: struct {
+					IdArr []uint8
+				}{
+					IdArr: []uint8{1, 2, 3},
+				},
+			},
+		},
+		{
+			name: "Test all simple types",
+			sample: struct {
+				Str  string
+				Flag bool
+				I8   int8
+				I16  int16
+				I32  int32
+				I64  int64
+				U8   uint8
+				U16  uint16
+				U32  uint32
+				U64  uint64
+				F32  float32
+				F64  float64
+			}{
+				Str:  "hello world!",
+				Flag: true,
+				I8:   -8,
+				I16:  -16,
+				I32:  -32,
+				I64:  -64,
+				U8:   8,
+				U16:  16,
+				U32:  32,
+				U64:  64,
+				F32:  32.32,
+				F64:  math.Inf(2),
+			},
+		},
+		{
+			name: "Test a lot of types",
+			sample: struct {
+				SimpleTypes struct {
+					Str  string
+					Flag bool
+					I8   int8
+					I16  int16
+					I32  int32
+					I64  int64
+					U8   uint8
+					U16  uint16
+					U32  uint32
+					U64  uint64
+					F32  float32
+					F64  float64
+				}
+				StructsWithArrays struct {
+					Data struct {
+						StrArr []string
+					}
+				}
+				Arrays struct {
+					ArrBool   []bool
+					ArrUint16 []uint16
+				}
+			}{
+				SimpleTypes: struct {
+					Str  string
+					Flag bool
+					I8   int8
+					I16  int16
+					I32  int32
+					I64  int64
+					U8   uint8
+					U16  uint16
+					U32  uint32
+					U64  uint64
+					F32  float32
+					F64  float64
+				}{
+					Str:  "hello world!",
+					Flag: true,
+					I8:   -8,
+					I16:  -16,
+					I32:  -32,
+					I64:  -64,
+					U8:   8,
+					U16:  16,
+					U32:  32,
+					U64:  64,
+					F32:  32.32,
+					F64:  math.Inf(2),
+				},
+				StructsWithArrays: struct {
+					Data struct {
+						StrArr []string
+					}
+				}{
+					Data: struct {
+						StrArr []string
+					}{
+						StrArr: []string{"hello", "world"},
+					},
+				},
+				Arrays: struct {
+					ArrBool   []bool
+					ArrUint16 []uint16
+				}{
+					ArrBool:   []bool{true, false},
+					ArrUint16: []uint16{1, 2},
+				},
 			},
 		},
 	}
@@ -177,33 +272,3 @@ func Test_EncodeDecode(t *testing.T) {
 		})
 	}
 }
-
-/*
-ArrBool  []bool
-ArrI32   []int32
-ArrUI32  []uint32
-ArrUint8 []uint8
-*/
-
-// {[0 0 0 3
-//1 0 0
-//
-//0 0 0 8
-//0 0 0 5
-//0 0 0 5
-//0 0 0 5
-//255 255 255 203
-//0 0 0 3
-//0 0 0 3
-//0 0 0 3
-//0 0 0 3
-//
-//
-//0 0 0 5
-//0 0 0 8
-//0 0 0 8
-//0 0 0 8
-//0 0 0 8
-//0 0 0 8
-
-//0 0 0 6 1 2 3 4 5 6 0 0 0 3 63 140 204 205 64 12 204 205 64 83 51 51 0 0 0 4 0 0 0 5 104 101 108 108 111 0 0 0 5 119 111 114 108 100 0 0 0 3 67 43 43 0 0 0 2 103 111]

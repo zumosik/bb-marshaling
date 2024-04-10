@@ -11,7 +11,8 @@ This library provides functionality to convert (marshal) a Go struct into a bina
 - int, int8, int16, int32, int64
 - uint, uint8, uint16, uint32, uint64
 - float32, float64
-- Array/Slice of any type upper or of array of supported types
+- Array/Slice of any type upper
+- Nested struct with fields of any type upper
 ## Not supported types for fields
 - pointer
 - func

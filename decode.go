@@ -65,6 +65,13 @@ func decodeField(buf *bytes.Buffer, field reflect.Value) error {
 		if err := decodeArraySlice(buf, field); err != nil {
 			return err
 		}
+	// --- Struct ---
+	case reflect.Struct:
+		for i := 0; i < field.NumField(); i++ {
+			if err := decodeField(buf, field.Field(i)); err != nil {
+				return err
+			}
+		}
 	default:
 		return ErrInvalidValue
 	}
